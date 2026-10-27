@@ -9,7 +9,8 @@
 param(
   [string]$Task,
   [string]$TaskFile,
-  # easy -> flash, medium -> sonnet, hard -> opus, research -> gemini-4-argon
+  # Gemini only (Claude models are handled by Claude's own Agent tool):
+  # easy -> flash, medium -> argon-medium, hard/research -> argon-high
   [ValidateSet('easy','medium','hard','research')][string]$Tier = 'medium',
   [string]$Model,                       # explicit model id overrides -Tier (see `agy models`)
   [ValidateSet('plan','accept-edits','auto')][string]$Mode = 'plan',   # plan = read-only
@@ -29,8 +30,8 @@ if (-not $Task) { throw 'Provide -Task or -TaskFile.' }
 if (-not $Model) {
   $Model = switch ($Tier) {
     'easy'     { 'gemini-3.8-flash-medium' }
-    'medium'   { 'claude-sonnet-5-5-medium' }
-    'hard'     { 'claude-opus-5-5-high' }
+    'medium'   { 'gemini-4-argon-medium' }
+    'hard'     { 'gemini-4-argon-high' }
     'research' { 'gemini-4-argon-high' }
   }
 }

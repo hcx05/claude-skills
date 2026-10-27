@@ -23,11 +23,11 @@ Output: a header line (status, model, conversation id, duration, tokens), then t
 | Tier | Model | Use for |
 |---|---|---|
 | easy | gemini-3.8-flash-medium | lookups, listing, simple summaries, formatting, bulk grunt work |
-| medium | claude-sonnet-5-5-medium (default) | ordinary coding/analysis, moderate reasoning |
-| hard | claude-opus-5-5-high | complex design, tricky debugging, careful review, high-stakes reasoning |
+| medium | gemini-4-argon-medium (default) | ordinary coding/analysis, moderate reasoning |
+| hard | gemini-4-argon-high | complex design, tricky debugging, careful review |
 | research | gemini-4-argon-high | long-context reading, broad research, cross-model second opinion |
 
-Override with `-Model <id>` (list: `agy models`), e.g. `gemini-4-argon-low`, `claude-opus-5-5-medium`, `gpt-oss-120b-medium`.
+agy is used for Gemini only. Claude models (haiku/sonnet/opus) are used through Claude's own Agent tool, not through agy. Override with `-Model <id>` (list: `agy models`), e.g. `gemini-4-argon-low`.
 
 ## Permissions
 Default is `-Mode plan` (read-only; no file edits). Verified behavior: in plan mode agy can read files and answer, but a task that needs a shell command or an edit is not executed. It returns a plan document instead (or fails with a "command permission" error). So use plan for read/analyze/review tasks, and `accept-edits` when the task must act. Use `-Mode accept-edits` only when the task needs it and the user has agreed or the edit is clearly in scope. Never use `--dangerously-skip-permissions`; the wrapper deliberately does not expose it.

@@ -18,12 +18,12 @@ Delegate only when it pays off: independent, parallelizable, or a second opinion
 |---|---|
 | Trivial | Agent tool `model: haiku`, or agy `-Tier easy` (Gemini 3.8 Flash) for parallel bulk work |
 | Standard | Agent tool `model: sonnet` (default) |
-| Hard | Agent tool `model: opus` (or agy `-Tier hard`, Opus 5.5 high) |
+| Hard | Agent tool `model: opus` (Claude only; agy is Gemini-only, `-Tier hard` = Gemini 4 Argon high as an alternative view) |
 | Broad / long context | agy `-Tier research` (Gemini 4 Argon high) |
 | Want a cross-model second opinion | agy (different model family than the one that produced the work) |
 | Needs the current conversation context or repo edits | Claude sub-agent (forks inherit context; agy starts cold and defaults to read-only) |
 
-Use agy via the `antigravity` skill (`agy-delegate.ps1`). Claude sub-agents via the Agent tool.
+agy is for Gemini models only. Never route Claude models through agy. Use agy via the `antigravity` skill (`agy-delegate.ps1`). Claude sub-agents via the Agent tool.
 
 ## Parallel work with agy
 agy runs alongside Claude, not instead of it:
