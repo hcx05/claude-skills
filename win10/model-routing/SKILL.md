@@ -1,6 +1,6 @@
 ---
 name: model-routing
-description: Decide which model/sub-agent should handle a delegated task: Claude haiku/sonnet/opus/fable via the Agent tool, or Gemini and others via the Antigravity CLI (agy). Use before spawning any sub-agent or delegating a task, when the user has not named a model.
+description: Decide which model/sub-agent should handle a delegated task: Claude haiku/sonnet/opus via the Agent tool, or Gemini and others via the Antigravity CLI (agy). Use before spawning any sub-agent or delegating a task, when the user has not named a model.
 ---
 
 # Model routing (no external router; the decision is made by Claude)
@@ -18,12 +18,19 @@ Delegate only when it pays off: independent, parallelizable, or a second opinion
 |---|---|
 | Trivial | Agent tool `model: haiku`, or agy `-Tier easy` (Gemini 3.8 Flash) for parallel bulk work |
 | Standard | Agent tool `model: sonnet` (default) |
-| Hard | Agent tool `model: opus`, or `fable` for the very hardest |
+| Hard | Agent tool `model: opus` (or agy `-Tier hard`, Opus 5.5 high) |
 | Broad / long context | agy `-Tier research` (Gemini 4 Argon high) |
 | Want a cross-model second opinion | agy (different model family than the one that produced the work) |
 | Needs the current conversation context or repo edits | Claude sub-agent (forks inherit context; agy starts cold and defaults to read-only) |
 
 Use agy via the `antigravity` skill (`agy-delegate.ps1`). Claude sub-agents via the Agent tool.
+
+## Parallel work with agy
+agy runs alongside Claude, not instead of it:
+- Launch agy with the Bash/PowerShell tool and `run_in_background: true`. Do not wait on it; keep working on your own part, and you are notified when it exits. Read its result then (the output file or notification).
+- Several agy calls and Agent-tool sub-agents can be started in the same response when their tasks are independent.
+- Give each parallel task its own scope (separate files/questions). Keep agy in the default read-only plan mode while others work, so nothing edits the same files.
+- Do not poll or sleep; merge results once the notifications arrive.
 
 ## Rules
 - Prefer the cheapest model that is likely to succeed; escalate one level if the result is weak or low-confidence.
