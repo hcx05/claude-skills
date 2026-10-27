@@ -19,6 +19,13 @@ powershell -NoProfile -File C:\Users\hchen\.claude\skills\antigravity\agy-delega
 Use `-TaskFile <path>` for long prompts. Use `run_in_background` on the Bash/PowerShell call for parallel delegation; several can run at once.
 Output: a header line (status, model, conversation id, duration, tokens), then the response. Pass `-Conversation <id>` to follow up in the same agy conversation. `-Raw` prints the full JSON.
 
+## Quota guard (built in)
+Before every call the wrapper runs `agy -p /usage` (free, 0 tokens) and reads the remaining percent of each bucket (Gemini weekly + 5-hour, Argon weekly). If any bucket the chosen model draws on is below `-MinRemaining` (default 20%), it does NOT call agy: it prints the buckets with reset times and exits with code 3. If the quota can't be read it also exits 3 (fails closed).
+- On exit 3: do the work with a Claude sub-agent or inline instead, and tell the user why and when the quota resets. Do not retry in a loop and do not bypass with `-SkipQuotaCheck` unless the user says so.
+- Check without running anything: `-QuotaOnly` (exit 0 = ok, 3 = too low).
+- Before launching several agy tasks in parallel or a large task, run `-QuotaOnly` first and raise `-MinRemaining` (e.g. 40) so the batch is unlikely to be cut off. Each parallel call re-checks, but quota drops as they run.
+- The `/usage` data is also available directly: `agy -p "/usage" --output-format json`.
+
 ## Choosing the tier (model by difficulty)
 | Tier | Model | Use for |
 |---|---|---|

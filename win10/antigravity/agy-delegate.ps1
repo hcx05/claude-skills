@@ -18,14 +18,17 @@ param(
   [string[]]$AddDir = @(),
   [string]$Conversation,                # resume a previous agy conversation ID
   [int]$TimeoutSec = 600,
-  [switch]$Raw                          # print full JSON instead of the summary
+  [switch]$Raw,                         # print full JSON instead of the summary
+  [int]$MinRemaining = 20,              # refuse to call agy if any relevant quota bucket is below this percent
+  [switch]$QuotaOnly,                   # just print the quota report and exit (0 = ok, 3 = too low)
+  [switch]$SkipQuotaCheck               # bypass the preflight (use only if the user insists)
 )
 
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 
 if ($TaskFile) { $Task = Get-Content -Raw -Encoding UTF8 $TaskFile }
-if (-not $Task) { throw 'Provide -Task or -TaskFile.' }
+if (-not $Task -and -not $QuotaOnly) { throw 'Provide -Task or -TaskFile.' }
 
 if (-not $Model) {
   $Model = switch ($Tier) {
@@ -34,6 +37,39 @@ if (-not $Model) {
     'hard'     { 'gemini-4-argon-high' }
     'research' { 'gemini-4-argon-high' }
   }
+}
+
+# --- Quota preflight: `agy -p /usage` is free (0 tokens) and returns remaining fractions per bucket.
+# A bucket is relevant to the model if the model draws on it; refuse before starting if any is low,
+# so a task is never begun that is likely to be cut off mid-run. Fails closed if quota can't be read.
+if ($QuotaOnly -or -not $SkipQuotaCheck) {
+  $ErrorActionPreference = 'Continue'
+  $qraw = & agy -p '/usage' --output-format json --print-timeout 30s 2>&1 | ForEach-Object { "$_" } | Out-String
+  $ErrorActionPreference = 'Stop'
+  $qline = ($qraw -split "`r?`n" | Where-Object { $_.TrimStart().StartsWith('{') } | Select-Object -Last 1)
+  try { $groups = ($qline | ConvertFrom-Json).command.data.groups } catch { $groups = $null }
+  if (-not $groups) {
+    Write-Output "[agy] could not read quota (/usage). Not calling agy. Use -SkipQuotaCheck to override."
+    exit 3
+  }
+  $buckets = $groups | ForEach-Object { $_.buckets } | Where-Object { $_ }
+  $relevant = switch -Wildcard ($Model) {
+    'gemini-4-argon*' { @('gemini-argon-wtu-weekly','gemini-5h') }  # argon weekly + shared Gemini 5h (conservative)
+    'gemini-*'        { @('gemini-weekly','gemini-5h') }
+    default           { @('3p-weekly','3p-5h') }                    # claude-* / gpt-* if ever used via -Model
+  }
+  $low = @()
+  foreach ($b in $buckets) {
+    $pct = [math]::Round($b.remaining_fraction * 100)
+    $isRel = $relevant -contains $b.id
+    Write-Output ("[quota] {0,-26} {1,3}%  resets {2}{3}" -f $b.id, $pct, $b.reset_time, $(if ($isRel) { '  <- used by ' + $Model } else { '' }))
+    if ($isRel -and $pct -lt $MinRemaining) { $low += "$($b.id)=$pct% (resets $($b.reset_time))" }
+  }
+  if ($low) {
+    Write-Output "[agy] quota too low (< $MinRemaining%): $($low -join '; '). Not calling agy. Do the work with Claude sub-agents instead, or wait for reset."
+    exit 3
+  }
+  if ($QuotaOnly) { Write-Output '[agy] quota ok'; exit 0 }
 }
 
 $argv = @('--print', $Task, '--output-format', 'json', '--model', $Model,
